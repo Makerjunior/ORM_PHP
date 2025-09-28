@@ -1,87 +1,151 @@
-No **SimpleOrm** que você está usando, existe um método chamado **`sql()`** que permite executar qualquer comando SQL diretamente. Ele é estático e tem a seguinte assinatura (geralmente):
+# 📝 Documentação de Exemplo de Uso: SimpleOrm
+
+Este documento detalha o uso da classe base **`SimpleOrm`** (adaptada para PostgreSQL/PDO) para interagir com uma tabela de `servicos`.
+
+## 1\. Definição do Modelo (Model)
+
+Para mapear a tabela `servicos` para um objeto PHP, estendemos a classe `SimpleOrm` e definimos as propriedades estáticas e públicas correspondentes às colunas.
+
+### Estrutura do Arquivo: `model/Servico.php`
 
 ```php
-SimpleOrm::sql(string $sql, int $fetchMode = SimpleOrm::FETCH_ALL, array $params = [])
-```
+class Servico extends SimpleOrm
+{
+    // Define o nome da tabela no PostgreSQL. Sobrescreve a convenção padrão.
+    public static $table = 'servicos'; 
+    
+    // Define a Chave Primária. Sobrescreve o padrão 'id' (se fosse diferente).
+    public static $pk = 'id'; 
 
-### Parâmetros
-
-1. **$sql** → A query SQL que você quer executar. Pode ser `SELECT`, `INSERT`, `UPDATE`, `DELETE` ou até criação de tabela.
-2. **$fetchMode** → Como você quer que o resultado seja retornado:
-
-   * `SimpleOrm::FETCH_ALL` → retorna todos os resultados como array.
-   * `SimpleOrm::FETCH_ONE` → retorna apenas um registro.
-   * `SimpleOrm::FETCH_NONE` → não retorna nada (usado para `INSERT`, `UPDATE`, `DELETE` ou `CREATE TABLE`).
-3. **$params** → Array de parâmetros para **prepared statements**, evitando SQL injection.
-
----
-
-### Exemplos práticos
-
-#### 1️⃣ Criar tabela
-
-```php
-SimpleOrm::sql("
-    CREATE TABLE IF NOT EXISTS servicos (
-        id SERIAL PRIMARY KEY,
-        name VARCHAR(100) NOT NULL,
-        descricao VARCHAR(100) UNIQUE NOT NULL,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )
-", SimpleOrm::FETCH_NONE);
-```
-
-#### 2️⃣ Inserir registro
-
-```php
-SimpleOrm::sql(
-    "INSERT INTO servicos (name, descricao) VALUES (:name, :descricao)",
-    SimpleOrm::FETCH_NONE,
-    ['name' => 'Barba', 'descricao' => 'Barbo terapia']
-);
-```
-
-#### 3️⃣ Buscar registros
-
-```php
-$servicos = SimpleOrm::sql(
-    "SELECT * FROM servicos WHERE descricao = :descricao",
-    SimpleOrm::FETCH_ALL,
-    ['descricao' => 'Barbo terapia']
-);
-
-foreach ($servicos as $s) {
-    echo "{$s['id']} - {$s['name']} ({$s['descricao']})<br>";
+    // Propriedades Públicas (Mapeamento de Colunas)
+    // Os tipos são definidos conforme as colunas do DB.
+    public ?int $id = null;
+    public string $name = '';
+    public string $descricao = '';
+    public ?string $created_at = null; 
+    // Nota: 'created_at' pode ser null no início, e o DB define o valor.
 }
 ```
 
-#### 4️⃣ Atualizar registro
+### Detalhes do Mapeamento
+
+  * **`public static $table = 'servicos';`**: Garante que o ORM utilize a tabela `servicos` em suas *queries*.
+  * **Propriedades Públicas:** O ORM mapeia **automaticamente** as propriedades públicas do objeto para as colunas do banco de dados (ex: `$this->name` é a coluna `"name"`).
+  * **Tipagem (PHP 7.4+ / 8+):** O uso de *Nullable Types* (`?int`, `?string`) reflete que `id` e `created_at` são definidos pelo banco de dados na inserção e podem ser `null` antes de serem salvos.
+
+-----
+
+## 2\. Inicialização e Criação da Tabela
+
+Antes de usar o modelo, precisamos garantir que a estrutura da tabela exista no banco de dados.
+
+### Execução de SQL Direto
+
+A classe `SimpleOrm` permite a execução de comandos DDL (Data Definition Language) via o método estático `SimpleOrm::sql()`.
 
 ```php
-SimpleOrm::sql(
-    "UPDATE servicos SET name = :name WHERE descricao = :descricao",
-    SimpleOrm::FETCH_NONE,
-    ['name' => 'Barba Atualizada', 'descricao' => 'Barbo terapia']
-);
+try {
+    SimpleOrm::sql("
+        CREATE TABLE IF NOT EXISTS \"servicos\" (
+            \"id\" SERIAL PRIMARY KEY, // Chave primária gerada automaticamente pelo PostgreSQL
+            \"name\" VARCHAR(100) NOT NULL,
+            \"descricao\" VARCHAR(100) ,
+            \"created_at\" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ", SimpleOrm::FETCH_NONE); // FETCH_NONE: Indica que não há resultados para buscar.
+
+    echo "✅ Tabela 'servicos' criada com sucesso!";
+} catch (Exception $e) {
+    echo "❌ Erro: " . $e->getMessage();
+}
 ```
 
-#### 5️⃣ Deletar registro
+  * **`SimpleOrm::sql()`**: É o método universal para *queries* que não se encaixam nas operações CRUD padrões.
+  * **`FETCH_NONE`**: Usado para comandos que não retornam dados (como `CREATE TABLE`, `UPDATE` em massa, `DELETE` em massa, `TRUNCATE`).
+
+-----
+
+## 3\. Demonstração de Operações CRUD
+
+Após a conexão ser estabelecida e a tabela criada, o modelo `Servico` está pronto para o uso.
+
+### A. Criação de um Novo Registro (`LOAD_NEW`)
+
+A criação de um registro e a persistência imediata no banco de dados são combinadas usando o método de carga **`SimpleOrm::LOAD_NEW`**.
 
 ```php
-SimpleOrm::sql(
-    "DELETE FROM servicos WHERE descricao = :descricao",
-    SimpleOrm::FETCH_NONE,
-    ['descricao' => 'Barbo terapia']
-);
+$servico = new Servico([
+    'name' => 'Barba1',
+    'descricao' => 'Barbo terapia1'
+], SimpleOrm::LOAD_NEW);
 ```
 
----
+  * **Hidratação e Inserção:** O construtor **`__construct`** primeiro hidrata o objeto com o array fornecido e, em seguida, chama automaticamente o método **`insert()`**.
+  * **Obtenção da PK:** O método `insert()` usa a cláusula `RETURNING id` do PostgreSQL. O `id` gerado é capturado e definido na propriedade `$servico->id`.
+  * **Acesso ao ID:** O ID do novo registro é acessível imediatamente via `$servico->id()` ou `$servico->id`.
 
-💡 **Dica:** Usar `SimpleOrm::sql()` é útil quando você precisa de **consultas específicas ou batch**, mas para operações básicas de CRUD, o ORM já possui métodos como:
+### B. Listagem de Todos os Registros (`all()`)
 
-* `::all()`
-* `::retrieveByPK($id)`
-* `->save()`
-* `->delete()`
+O método estático **`all()`** é um *wrapper* para buscar todos os registros da tabela mapeada.
 
+```php
+$servicos = Servico::all();
+foreach ($servicos as $s) {
+    echo "📌 {$s->id()} - {$s->name} ({$s->descricao})<br>";
+}
+```
 
+  * **Funcionamento:** Internamente, chama `Servico::sql("SELECT * FROM :table")`.
+  * **Retorno:** Retorna um *array* de objetos `Servico` totalmente hidratados.
+
+### C. Busca por Chave Primária (`retrieveByPK()`)
+
+Para carregar um único objeto pelo seu ID, utilizamos o método `retrieveByPK()`.
+
+```php
+$found = Servico::retrieveByPK($servico->id());
+```
+
+  * **Funcionamento:** Internamente, cria uma *query* `SELECT * FROM "servicos" WHERE "id" = ?` e carrega o objeto com o método de carga **`SimpleOrm::LOAD_BY_PK`**.
+  * **Resultado:** Retorna um objeto `Servico`. Se não for encontrado, lança uma `\Exception`.
+
+### D. Atualização e Persistência (`set()` e `save()`)
+
+A modificação de um objeto existente deve ser feita usando o método **`set()`** para que o ORM rastreie as alterações, seguido pelo método **`save()`** para persistir a alteração.
+
+```php
+$found->set('descricao', 'Corte e acabamento profissional'); // 1. Rastreia a mudança
+$found->save(); // 2. Executa o UPDATE
+```
+
+  * **`set()`:** Este método é crucial. Ele verifica se o novo valor é diferente do atual e, em caso afirmativo, marca o campo na lista `$modifiedFields`.
+  * **`save()`:** Como o objeto `$found` **não é novo** (`isNew()` retorna `false`), ele chama o método **`update()`**, que gera a *query* `UPDATE` contendo apenas os campos que foram modificados via `set()`.
+
+### E. Exclusão (`delete()`)
+
+Para remover o registro do banco de dados, chamamos o método `delete()` no objeto carregado.
+
+```php
+$found->delete();
+```
+
+  * **Funcionamento:** Executa a *query* `DELETE FROM "servicos" WHERE "id" = ?`.
+  * **Nota no Exemplo:** O exemplo mantém a linha comentada (`//$found->delete();`) para que o registro persista para futuras execuções do script de teste.
+
+-----
+
+## 💡 Resumo do Fluxo do Exemplo
+
+1.  **DDL:** `SimpleOrm::sql(...)` cria a tabela `servicos`.
+2.  **Create:** `new Servico(..., LOAD_NEW)`
+      * $\rightarrow$ Objeto criado.
+      * $\rightarrow$ `insert()` chamado.
+      * $\rightarrow$ `INSERT INTO servicos (...) VALUES (...) RETURNING id`.
+      * $\rightarrow$ `$servico->id` definido (e.g., 1).
+3.  **Read (All):** `Servico::all()` $\rightarrow$ `SELECT * FROM servicos` $\rightarrow$ Retorna `[Servico object]`.
+4.  **Read (PK):** `Servico::retrieveByPK(1)` $\rightarrow$ `SELECT * FROM servicos WHERE id = 1` $\rightarrow$ Retorna o objeto `$found`.
+5.  **Update:** `$found->set(...)` + `$found->save()`
+      * $\rightarrow$ `set()` registra que `descricao` mudou.
+      * $\rightarrow$ `save()` chama `update()`.
+      * $\rightarrow$ `UPDATE servicos SET "descricao" = '...' WHERE "id" = 1`.
+6.  **Delete:** `$found->delete()` $\rightarrow$ `DELETE FROM servicos WHERE id = 1`.
