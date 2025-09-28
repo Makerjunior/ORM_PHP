@@ -1,6 +1,7 @@
 <?php
 
-// ============ MODELO ============
+// ============ MODELO ============ exemplo de uso
+require_once "orm/SimpleOrm.php";
 class User extends SimpleOrm {
     protected static $table = "users"; // tabela no Postgres
     public $id;

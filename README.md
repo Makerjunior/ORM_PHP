@@ -75,8 +75,8 @@ A criação de um registro e a persistência imediata no banco de dados são com
 
 ```php
 $servico = new Servico([
-    'name' => 'Barba1',
-    'descricao' => 'Barbo terapia1'
+    'name' => 'Corte',
+    'descricao' => 'Corte de cabelo simples'
 ], SimpleOrm::LOAD_NEW);
 ```
 

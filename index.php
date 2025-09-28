@@ -3,48 +3,7 @@ require_once "orm/SimpleOrm.php"; // ORM completo que você colou
 require_once "database/db.php";      // importa $pdo e inicializa ORM
 require_once "model/User.php";
 
-/*
-
-// ============ TESTES ============
-try {
-    echo "✅ Conexão funcionando e ORM carregado!<br>";
-     
-    // Criar usuário novo
-    echo "Inserindo usuario";
-    $user = new User(['name' => 'João ORM', 'email' => 'joao.orm@example.com'], SimpleOrm::LOAD_NEW);
-    echo "🙋 Criado ID: {$user->id()}<br>";
-
-    // Listar todos
-    echo "Lista todos os usuarios";
-    $users = User::all();
-    foreach ($users as $u) {
-        echo "📌 {$u->id()} - {$u->name} ({$u->email})<br>";
-    }
-
-    // Buscar por ID
-    echo "Busca usuário por (ID)";
-    $found = User::retrieveByPK($user->id());
-    echo "🔍 Encontrado: {$found->name} - {$found->email}<br>";
-
-    // Atualizar
-    echo "Atualiza Usuário";
-    $found->set('email', 'novoemail@example.com');
-    $found->save();
-    echo "✏️ Email atualizado: {$found->email}<br>";
-
-    // Deletar
-    echo "deleta Usuário";
-    $found->delete();
-    echo "🗑️ Usuário deletado!<br>";
-    
-
-
-
-} catch (Exception $e) {
-    echo "❌ Erro: " . $e->getMessage();
-}
-*/
-// Criar tabela 
+// Cria a tabela 'servicos' se não existir
 try {
     SimpleOrm::sql("
         CREATE TABLE IF NOT EXISTS \"servicos\" (
@@ -59,9 +18,8 @@ try {
 } catch (Exception $e) {
     echo "❌ Erro: " . $e->getMessage();
 }
-// model/Servico.php
 
-
+// Cria a classe Servico
 class Servico extends SimpleOrm
 {
     public static $table = 'servicos';
@@ -75,7 +33,7 @@ class Servico extends SimpleOrm
 
 
 
-
+// TestE a conexão e operações básicas
 try {
     echo "✅ Conexão funcionando e ORM carregado!<br>";
 
@@ -83,8 +41,8 @@ try {
     // Criar serviço
     // ==========================
     $servico = new Servico([
-        'name' => 'Barba1',
-        'descricao' => 'Barbo terapia1'
+        'name' => 'Corte de cabelo',
+        'descricao' => 'Corte e acabamento simples'
     ], SimpleOrm::LOAD_NEW);
 
     

@@ -1,20 +1,31 @@
+
 <?php
-require_once "orm/SimpleOrm.php"; // ✅ Precisa estar definido antes
+require_once "orm/SimpleOrm.php"; // Ajuste o caminho conforme necessário
+// 1. Inclui o arquivo de configuração (de preferência fora da raiz web)
+$dbConfig = require 'config/database.php'; 
 
-$host = "ep-old-haze-ad11r3y5-pooler.c-2.us-east-1.aws.neon.tech";
-$port = 5432;
-$dbname = "neondb";
-$user = "neondb_owner";
-$password = "endpoint=ep-old-haze-ad11r3y5-pooler;npg_ArpTF6lym8iL";
+// Extrai as variáveis
+$host     = $dbConfig['host'];
+$port     = $dbConfig['port'];
+$dbname   = $dbConfig['dbname'];
+$user     = $dbConfig['user'];
+$password = $dbConfig['password'];
+$sslmode  = $dbConfig['sslmode'];
 
-$dsn = "pgsql:host=$host;port=$port;dbname=$dbname;sslmode=require";
+// 2. Monta o DSN
+$dsn = "pgsql:host=$host;port=$port;dbname=$dbname;sslmode=$sslmode";
 
 try {
+    // 3. Estabelece a conexão PDO
     $pdo = new PDO($dsn, $user, $password, [
-        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION
+        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC // Padrão útil para todos
     ]);
-    // Inicializa ORM
+
+    // 4. Inicializa o ORM com a conexão
     SimpleOrm::useConnection($pdo, $dbname);
+
 } catch (PDOException $e) {
-    die("❌ Erro de conexão: " . $e->getMessage());
+    // Para ambientes de produção, use um log em vez de 'die'
+    die("❌ Erro de conexão com o Banco de Dados. Verifique as configurações. Detalhes: " . $e->getMessage());
 }
