@@ -84,6 +84,4 @@ SimpleOrm::sql(
 * `->save()`
 * `->delete()`
 
-Se quiser, posso te mostrar **uma função no modelo `Servico`** que usa o `sql()` para **inserir apenas se não existir**, simplificando todo o processo em um único método.
 
-Quer que eu faça isso?
